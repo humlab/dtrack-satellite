@@ -1,0 +1,10 @@
+[Unit]
+Description=Satellite egress network (only for DTrack)
+After=network-online.target
+
+[Network]
+NetworkName=satellite-network
+Driver=bridge
+# give it its own subnet so we can firewall it
+Subnet=10.42.0.0/24
+Gateway=10.42.0.1

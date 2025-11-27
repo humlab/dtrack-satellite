@@ -1,0 +1,22 @@
+[Unit]
+Description=Dependency-Track Satellite Scanner
+After=demo-service.service
+
+[Container]
+ContainerName=dtrack-satellite
+Image=localhost/dtrack-satellite:latest
+
+# Internal app network (no internet)
+Network=demo.network
+# Egress network
+Network=satellite-network
+
+EnvironmentFile=%h/configuration/secrets/dtrack.env
+
+Volume=/run/user/%U/podman/podman.sock:/run/podman/podman.sock:rw
+
+Environment=PODMAN_HOST=unix:///run/podman/podman.sock
+Environment=SYFT_CHECK_FOR_APP_UPDATE=false
+
+[Install]
+WantedBy=multi-user.target default.target
