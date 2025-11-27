@@ -87,7 +87,7 @@ SCAN_INTERVAL_DEFAULT=${SCAN_INTERVAL_DEFAULT:-"86400"}
 DT_PROJECT_VERSION_DEFAULT=$(grep -E '^DT_PROJECT_VERSION=' "$DEST_ENV_FILE" | cut -d= -f2- || true)
 DT_PROJECT_VERSION_DEFAULT=${DT_PROJECT_VERSION_DEFAULT:-"v0.0.0"}
 
-DT_PROJECT_NAME_DEFAULT="$(basename "$SCRIPT_DIR")"
+DT_PROJECT_NAME_DEFAULT="$(basename "$(dirname "$(pwd)")")"
 
 if [ -r /etc/hostname ]; then
     SERVER_HOSTNAME_DEFAULT="$(tr -d '\n' < /etc/hostname)"
