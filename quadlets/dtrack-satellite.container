@@ -1,6 +1,7 @@
 [Unit]
 Description=Dependency-Track Satellite Scanner
-#After=demo-service.service
+Requires=dtrack-satellite.network
+After=dtrack-satellite.network
 
 [Container]
 ContainerName=dtrack-satellite
@@ -19,4 +20,4 @@ Environment=PODMAN_HOST=unix:///run/podman/podman.sock
 Environment=SYFT_CHECK_FOR_APP_UPDATE=false
 
 [Install]
-WantedBy=multi-user.target default.target
+WantedBy=default.target
