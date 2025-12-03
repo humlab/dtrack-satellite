@@ -5,10 +5,12 @@ set -euo pipefail
 DEST_BASE="$HOME/configuration"
 DEST_IMAGE_BUILD_DTRACK="$DEST_BASE/image_builds/dtrack-agent"
 DEST_IMAGE_BUILD_OPENSEARCH="$DEST_BASE/image_builds/opensearch-agent"
+DEST_IMAGE_BUILD_CADVISOR="$DEST_BASE/image_builds/cadvisor-agent"
 DEST_QUADLETS="$DEST_BASE/quadlets"
 DEST_SECRETS="$DEST_BASE/secrets"
 DEST_ENV_FILE_DTRACK="$DEST_SECRETS/dtrack.env"
 DEST_ENV_FILE_OPENSEARCH="$DEST_SECRETS/opensearch.env"
+DEST_ENV_FILE_CADVISOR="$DEST_SECRETS/cadvisor.env"
 
 # Quadlet systemd directory
 QUADLET_SYSTEMD_DIR="$HOME/.config/containers/systemd"
@@ -49,6 +51,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 TEMPLATE_ENV_DTRACK="$SCRIPT_DIR/env/dtrack.env"
 TEMPLATE_ENV_OPENSEARCH="$SCRIPT_DIR/env/opensearch.env"
+TEMPLATE_ENV_CADVISOR="$SCRIPT_DIR/env/cadvisor.env"
 if [ ! -f "$TEMPLATE_ENV_DTRACK" ]; then
     log "ERROR: dtrack.env template not found."
     exit 1
@@ -57,10 +60,14 @@ if [ ! -f "$TEMPLATE_ENV_OPENSEARCH" ]; then
     log "ERROR: opensearch.env template not found."
     exit 1
 fi
+if [ ! -f "$TEMPLATE_ENV_CADVISOR" ]; then
+    log "ERROR: cadvisor.env template not found."
+    exit 1
+fi
 
 # --- Prepare destination directories ---
 log "Creating destination directories under $DEST_BASE"
-mkdir -p "$DEST_IMAGE_BUILD_DTRACK" "$DEST_IMAGE_BUILD_OPENSEARCH" "$DEST_QUADLETS" "$DEST_SECRETS" "$QUADLET_SYSTEMD_DIR"
+mkdir -p "$DEST_IMAGE_BUILD_DTRACK" "$DEST_IMAGE_BUILD_OPENSEARCH" "$DEST_IMAGE_BUILD_CADVISOR" "$DEST_QUADLETS" "$DEST_SECRETS" "$QUADLET_SYSTEMD_DIR"
 
 # --- Copy dtrack files ---
 log "Copying dtrack-agent files"
@@ -73,15 +80,21 @@ log "Copying opensearch-agent files"
 cp "$SCRIPT_DIR/image_builds/opensearch/Containerfile" "$DEST_IMAGE_BUILD_OPENSEARCH/Containerfile"
 cp "$SCRIPT_DIR/image_builds/opensearch/agent.py" "$DEST_IMAGE_BUILD_OPENSEARCH/agent.py"
 
+# --- Copy cadvisor files ---
+log "Copying cadvisor-agent files"
+cp "$SCRIPT_DIR/image_builds/cadvisor/Containerfile" "$DEST_IMAGE_BUILD_CADVISOR/Containerfile"
+
 # --- Copy quadlet files ---
 log "Copying quadlet files"
 cp "$SCRIPT_DIR/quadlets/dtrack-agent.container" "$DEST_QUADLETS/dtrack-agent.container"
 cp "$SCRIPT_DIR/quadlets/opensearch-agent.container" "$DEST_QUADLETS/opensearch-agent.container"
+cp "$SCRIPT_DIR/quadlets/cadvisor-agent.container" "$DEST_QUADLETS/cadvisor-agent.container"
 cp "$SCRIPT_DIR/quadlets/egress.network" "$DEST_QUADLETS/egress.network"
 
 log "Copying env templates"
 cp "$TEMPLATE_ENV_DTRACK" "$DEST_ENV_FILE_DTRACK"
 cp "$TEMPLATE_ENV_OPENSEARCH" "$DEST_ENV_FILE_OPENSEARCH"
+cp "$TEMPLATE_ENV_CADVISOR" "$DEST_ENV_FILE_CADVISOR"
 
 # --- Default Values ---
 DT_URL_DEFAULT=$(grep -E '^DT_URL=' "$DEST_ENV_FILE_DTRACK" | cut -d= -f2- || true)
@@ -177,6 +190,7 @@ link_quadlet() {
 
 link_quadlet "dtrack-agent.container"
 link_quadlet "opensearch-agent.container"
+link_quadlet "cadvisor-agent.container"
 link_quadlet "egress.network"
 
 # --- Build the container images ---
@@ -193,6 +207,14 @@ if cd "$DEST_IMAGE_BUILD_OPENSEARCH" && podman build --no-cache -t localhost/ope
     log "opensearch-agent image built successfully"
 else
     log "ERROR: Failed to build opensearch-agent image"
+    exit 1
+fi
+
+log "Building cadvisor-agent container image"
+if cd "$DEST_IMAGE_BUILD_CADVISOR" && podman build --no-cache -t localhost/cadvisor-agent:latest .; then
+    log "cadvisor-agent image built successfully"
+else
+    log "ERROR: Failed to build cadvisor-agent image"
     exit 1
 fi
 
@@ -230,6 +252,13 @@ if systemctl --user daemon-reload; then
     else
         log "WARNING: Could not start opensearch-agent.service"
     fi
+
+    log "Starting cadvisor-agent.service"
+    if systemctl --user start --now cadvisor-agent.service; then
+        log "cadvisor-agent.service started"
+    else
+        log "WARNING: Could not start cadvisor-agent.service"
+    fi
 else
     log "WARNING: systemctl --user daemon-reload failed"
 fi
@@ -241,3 +270,4 @@ echo "Symlinks created in:   $QUADLET_SYSTEMD_DIR"
 echo "Environment files:"
 echo "  - $DEST_ENV_FILE_DTRACK"
 echo "  - $DEST_ENV_FILE_OPENSEARCH"
+echo "  - $DEST_ENV_FILE_CADVISOR"
