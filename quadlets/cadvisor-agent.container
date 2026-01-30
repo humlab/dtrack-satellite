@@ -10,11 +10,9 @@ Image=localhost/cadvisor-agent:latest
 # Egress network
 Network=egress-network
 
-EnvironmentFile=%h/configuration/secrets/opensearch.env
+EnvironmentFile=%h/configuration/secrets/cadvisor.env
 
-Volume=/run/user/%U/podman/podman.sock:/run/podman/podman.sock:rw
-
-Environment=PODMAN_HOST=unix:///run/podman/podman.sock
+Volume=/run/user/%U/podman/podman.sock:/var/run/docker.sock:rw
 
 [Install]
 WantedBy=default.target
